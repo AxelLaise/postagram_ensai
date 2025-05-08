@@ -60,7 +60,6 @@ bucket = os.getenv("BUCKET")
 
 
 
-
 @app.post("/posts")
 async def post_a_post(post: Post, authorization: str | None = Header(default=None)):
     """
@@ -69,7 +68,11 @@ async def post_a_post(post: Post, authorization: str | None = Header(default=Non
     logger.info(f"title : {post.title}")
     logger.info(f"body : {post.body}")
     logger.info(f"user : {authorization}")
-
+    res = table.put_item(
+           Item={"user": 'USER#' + authorization,
+                 "id": 'POST#' + f'{uuid.uuid4()}',
+                 "title": post.title,
+                 "body": post.body})
 
     # Doit retourner le résultat de la requête la table dynamodb
     return res
@@ -83,10 +86,21 @@ async def get_all_posts(user: Union[str, None] = None):
     """
     if user :
         logger.info(f"Récupération des postes de : {user}")
+        res = table.query(
+                Select='ALL_ATTRIBUTES',
+                KeyConditionExpression="#user = :user",
+                ExpressionAttributeNames={
+                "#user": "user"
+                },
+                ExpressionAttributeValues={
+                ":user": "USER#" + f"{user}",
+                },
+                )
     else :
         logger.info("Récupération de tous les postes")
+        res = table.scan()
      # Doit retourner une liste de posts
-    return res[""]
+    return res["Items"]
 
     
 @app.delete("/posts/{post_id}")
@@ -95,13 +109,34 @@ async def delete_post(post_id: str, authorization: str | None = Header(default=N
     logger.info(f"post id : {post_id}")
     logger.info(f"user: {authorization}")
     # Récupération des infos du poste
-
+    item = table.query(
+            Select='ALL_ATTRIBUTES',
+            KeyConditionExpression="#user = :user AND id = :id",
+            ExpressionAttributeNames={
+            "#user": "user"
+            },
+            ExpressionAttributeValues={
+            ":user": "USER#" + authorization,
+            ":id": "POST#" + post_id
+            },
+            )
     # S'il y a une image on la supprime de S3
-
-    # Suppression de la ligne dans la base dynamodb
-
-    # Retourne le résultat de la requête de suppression
-    return item
+    try:
+        if item["Items"][0]["image"]:
+            s3_client.delete_object(
+                Bucket=bucket,
+                Key=item["Items"][0]["image"]
+            )
+    finally:
+        # Suppression de la ligne dans la base dynamodb
+        resp = table.delete_item(
+            Key={
+            'user': "USER#" + authorization,
+            'id': "POST#" + post_id
+            }
+        )
+        # Retourne le résultat de la requête de suppression
+        return resp
 
 
 
