@@ -57,7 +57,7 @@ class ServerStack(TerraformStack):
             key_name="vockey",
             user_data=user_data,
             tags={"Name":"TP noté"},
-            iam_instance_profile={"name":f"arn:aws:iam::{account_id}:role/LabRole"}
+            iam_instance_profile={"name":"LabInstanceProfile"}
             )
     
 
@@ -85,7 +85,7 @@ class ServerStack(TerraformStack):
         )
 
         asg = AutoscalingGroup(
-            self, "",
+            self, "asg",
             min_size=1,
             max_size=4,
             desired_capacity=2,
