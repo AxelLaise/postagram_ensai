@@ -88,7 +88,7 @@ class ServerStack(TerraformStack):
             self, "asg",
             min_size=1,
             max_size=4,
-            desired_capacity=2,
+            desired_capacity=1,
             launch_template={"id":launch_template.id},
             vpc_zone_identifier=subnets ,
             target_group_arns=[target_group.arn]

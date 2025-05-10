@@ -39,6 +39,13 @@ def lambda_handler(event, context):
     labels = [label["Name"] for label in label_data["Labels"]]
     logger.info(f"Labels detected : {labels}")
 
+    #Création de l'url présignée
+    signed_url = s3.generate_presigned_url(
+        ClientMethod='get_object',
+        Params={'Bucket': bucket, 'Key': key},
+        ExpiresIn=3600  # durée de validité en secondes (1h ici)
+    )
+
     # Mise à jour de la table dynamodb
     table.update_item(
         Key={
@@ -48,7 +55,7 @@ def lambda_handler(event, context):
         UpdateExpression="set labels = :l, image = :k",
         ExpressionAttributeValues={
             ":l": labels,
-            ":k": key
+            ":k": signed_url
         },
         ReturnValues="UPDATED_NEW"
     )
